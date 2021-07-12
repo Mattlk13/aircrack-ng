@@ -184,10 +184,6 @@ static struct local_options
 
 	int asso_client; /* only show associated clients */
 
-	char * iwpriv;
-	char * iwconfig;
-	char * wlanctlng;
-
 	unsigned char wpa_bssid[6]; /* the wpa handshake bssid   */
 	char message[512];
 	char decloak;
@@ -281,7 +277,7 @@ static struct local_options
 
 static void resetSelection(void)
 {
-	lopt.sort_by = SORT_BY_POWER;
+	lopt.sort_by = SORT_BY_NOTHING;
 	lopt.sort_inv = 1;
 
 	lopt.relative_time = 0;
@@ -526,7 +522,10 @@ static THREAD_ENTRY(input_thread)
 
 		if (keycode == KEY_m)
 		{
-			lopt.mark_cur_ap = 1;
+			if (lopt.p_selected_ap != NULL)
+			{
+				lopt.mark_cur_ap = 1;
+			}
 		}
 
 		if (keycode == KEY_ARROW_DOWN)
@@ -1252,7 +1251,8 @@ static int dump_add_packet(unsigned char * h80211,
 
 	/* if it's a LLC null packet, just forget it (may change in the future) */
 
-	if (caplen > 28)
+	if (((h80211[0] & IEEE80211_FC0_TYPE_MASK) == IEEE80211_FC0_TYPE_DATA)
+		&& (caplen > 28))
 		if (memcmp(h80211 + 24, llcnull, 4) == 0) return (0);
 
 	/* grab the sequence number */
@@ -2672,12 +2672,16 @@ skip_probe:
 
 				st_cur->wpa.state = 1;
 
-				if (h80211[z + 99] == 0xdd) // RSN
+				if (h80211[z + 99] == IEEE80211_ELEMID_VENDOR)
 				{
-					if (h80211[z + 101] == 0x00 && h80211[z + 102] == 0x0f
-						&& h80211[z + 103] == 0xac) // OUI: IEEE8021
+					const uint8_t rsn_oui[] = {RSN_OUI & 0xff,
+											   (RSN_OUI >> 8) & 0xff,
+											   (RSN_OUI >> 16) & 0xff};
+
+					if (memcmp(rsn_oui, &h80211[z + 101], 3) == 0
+						&& h80211[z + 104] == RSN_CSE_CCMP)
 					{
-						if (h80211[z + 104] == 0x04) // OUI SUBTYPE
+						if (memcmp(ZERO, &h80211[z + 105], 16) != 0) //-V512
 						{
 							// Got a PMKID value?!
 							memcpy(st_cur->wpa.pmkid, &h80211[z + 105], 16);
@@ -4015,7 +4019,12 @@ static void dump_print(int ws_row, int ws_col, int if_num)
 			len = strlen(strbuf);
 
 			// write spaces (32) until the end of column
-			memset(strbuf + len, 32, (size_t) ws_col - 1);
+			int len_remaining = ws_col - len;
+			if (len_remaining > 0)
+			{
+				ALLEGE((size_t) len + len_remaining <= sizeof(strbuf));
+				memset(strbuf + len, 32, len_remaining);
+			}
 
 			strbuf[ws_col - 1] = '\0';
 			console_puts(strbuf);

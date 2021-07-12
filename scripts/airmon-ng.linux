@@ -5,7 +5,7 @@ ELITE="0"
 USERID=""
 checkvm_status=""
 MAC80211=0
-IW_SOURCE="https://mirrors.edge.kernel.org/pub/software/network/iw/iw-5.4.tar.xz"
+IW_SOURCE="https://mirrors.edge.kernel.org/pub/software/network/iw/iw-5.9.tar.xz"
 IW_ERROR=""
 if [ ! -d /sys/ ]; then
 	printf "CONFIG_SYSFS is disabled in your kernel, this program will almost certainly not work.\n"
@@ -551,8 +551,15 @@ isRPiWireless() {
 	[ "${HW_REV}" = 'b03111' ] && return 1
 	[ "${HW_REV}" = 'c03111' ] && return 1
 	[ "${HW_REV}" = 'b03112' ] && return 1
+	[ "${HW_REV}" = 'b03114' ] && return 1
 	[ "${HW_REV}" = 'c03112' ] && return 1
+	[ "${HW_REV}" = 'c03114' ] && return 1
 	[ "${HW_REV}" = 'd03114' ] && return 1
+	[ "${HW_REV}" = 'c03130' ] && return 1
+	[ "${HW_REV}" = 'a03140' ] && return 1
+	[ "${HW_REV}" = 'b03140' ] && return 1
+	[ "${HW_REV}" = 'c03140' ] && return 1
+	[ "${HW_REV}" = 'd03140' ] && return 1
 	return 0
 }
 
@@ -1456,18 +1463,10 @@ if [ "$DEBUG" = "1" ]; then
 			/bin/sh --version
 		fi
 	fi
-	if [ -n "$SHELL" ]; then
-		if $SHELL --version > /dev/null 2>&1
-		then
-			printf "\nSHELL is $($SHELL --version)\n\n"
-		else
-			printf "\nSHELL is $SHELL\n\n"
-		fi
-	fi
 fi
 if [ "$VERBOSE" = "1" ]; then
 	if [ -n "$(command -v lsb_release 2> /dev/null)" ]; then
-		lsb_release -a
+		lsb_release -a | grep -iv 'n/a'
 		printf "\n"
 	fi
 	uname -a
